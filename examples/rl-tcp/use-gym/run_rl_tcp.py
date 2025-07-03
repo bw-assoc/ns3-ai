@@ -22,7 +22,7 @@ import torch
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from agents import TcpNewRenoAgent, TcpDeepQAgent, TcpQAgent
+from agents import TcpNewRenoAgent, TcpDeepQAgent, TcpQAgent, Ben_Agent
 import ns3ai_gym_env
 import gymnasium as gym
 import sys
@@ -36,6 +36,9 @@ def get_agent(socketUuid, useRl):
             if args.rl_algo == 'DeepQ':
                 agent = TcpDeepQAgent()
                 print("new Deep Q-learning agent, uuid = {}".format(socketUuid))
+            elif args.rl_algo == 'Ben_Agent':
+                agent = Ben_Agent()
+                print("new Ben Agent, uuid = {}".format(socketUuid))
             else:
                 agent = TcpQAgent()
                 print("new Q-learning agent, uuid = {}".format(socketUuid))
@@ -46,6 +49,7 @@ def get_agent(socketUuid, useRl):
 
     return agent
 
+cwd = os.getcwd()
 
 # initialize variable
 get_agent.tcpAgents = {}
@@ -66,7 +70,7 @@ parser.add_argument('--result_dir', type=str,
 parser.add_argument('--use_rl', action='store_true',
                     help='whether use rl algorithm')
 parser.add_argument('--rl_algo', type=str,
-                    default='DeepQ', help='RL Algorithm, Q or DeepQ')
+                    default='Ben_Agent', help='RL Algorithm, Q or DeepQ')
 
 args = parser.parse_args()
 my_seed = 42
@@ -85,7 +89,7 @@ if args.duration:
     my_duration = args.duration
 
 if args.use_rl:
-    if (args.rl_algo != 'Q') and (args.rl_algo != 'DeepQ'):
+    if (args.rl_algo != 'Q') and (args.rl_algo != 'DeepQ') and (args.rl_algo != 'Ben_Agent'):
         print("Invalid RL Algorithm {}".format(args.rl_algo))
         exit(1)
 
@@ -162,17 +166,19 @@ except Exception as e:
 else:
     if args.result:
         if args.result_dir:
+            args.result_dir = os.path.join(cwd, args.result_dir)
             if not os.path.exists(args.result_dir):
                 os.mkdir(args.result_dir)
         for res in res_list:
             y = globals()[res]
-            x = range(len(y))
+            x = np.arange(0, my_duration, my_duration/len(y))
             plt.clf()
             plt.plot(x, y, label=res[:-2], linewidth=1, color='r')
-            plt.xlabel('Step Number')
-            plt.title('Information of {}'.format(res[:-2]))
+            plt.xlabel('seconds')
+            plt.title('{} for step interval of 100 ms'.format(res[:-2]))
             plt.savefig('{}.png'.format(os.path.join(args.result_dir, res[:-2])))
 
 finally:
     print("Finally exiting...")
     env.close()
+

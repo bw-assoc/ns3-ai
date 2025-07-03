@@ -150,15 +150,17 @@ class TcpDeepQAgent:
 
         # update DQN
         self.s = self.s_
-        self.s_ = [ssThresh, cWnd, segmentsAcked, segmentSize, bytesInFlight]
+        #self.s_ = [ssThresh, cWnd, segmentsAcked, segmentSize, bytesInFlight]
+        self.s_ = [cWnd, 0, 0, 0, 0]
         if self.s is not None:  # not first time
-            self.r = segmentsAcked - bytesInFlight - cWnd
+            self.r = 1 if self.a == 1 else 0
             self.dqn.store_transition(self.s, self.a, self.r, self.s_)
             if self.dqn.memory_counter > self.dqn.memory_capacity:
                 self.dqn.learn()
 
         # choose action
         self.a = self.dqn.choose_action(self.s_)
+        print("Action:", self.a)
         if self.a & 1:
             self.new_cWnd = cWnd + segmentSize
         else:
@@ -244,3 +246,131 @@ class TcpQAgent:
             self.new_ssThresh = int(bytesInFlight / 2)
 
         return [self.new_ssThresh, self.new_cWnd]
+
+
+
+class DeepQNetwork(nn.Module):
+    def __init__(self, learning_rate, input_dimensions, output_dimensions, hidden_dimensions=20):
+        super(DeepQNetwork, self).__init__()
+        self.learning_rate = learning_rate
+        self.input_dimensions = input_dimensions
+        self.output_dimensions = output_dimensions
+
+        self.layer1 = nn.Linear(self.input_dimensions, hidden_dimensions)
+        self.activ1 = nn.ReLU()
+        self.layer2 = nn.Linear(hidden_dimensions, hidden_dimensions)
+        self.activ2 = nn.ReLU()
+        self.layer3 = nn.Linear(hidden_dimensions, self.output_dimensions)
+
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+        self.loss = nn.MSELoss()
+        if torch.cuda.is_available(): self.to('cuda')
+    
+    def forward(self, input):
+        x = self.layer1(input)
+        x = self.activ1(x)
+        x = self.layer2(x)
+        x = self.activ2(x)
+        return self.layer3(x)
+
+class Ben_Agent():
+    # gamma is weighting of future rewards
+    # epsilon is tradeoff between exploration and best action
+    def __init__(self):
+        self.gamma = 0.15
+        self.learning_rate = 0.0003
+        self.input_dimensions = 3
+        self.num_actions = 3
+        self.actions = [i for i in range(self.num_actions)]
+        self.batch_size = 64
+        self.memory_size = 2000
+        self.memory_counter = 0
+        self.epsilon = 1
+        self.minimum_epsilon = 0.01
+        self.epsilon_decrement = 5e-4
+        self.current_state = None # Compatibility layer
+        self.previous = {
+                "throughput": None,
+                "avgRtt": None
+            }
+
+        self.eval = DeepQNetwork(self.learning_rate, input_dimensions=self.input_dimensions, output_dimensions=self.num_actions, hidden_dimensions=128)
+        self.initial_state_memory = np.zeros((self.memory_size, self.input_dimensions), dtype=np.float32)
+        self.resulting_state_memory = np.zeros((self.memory_size, self.input_dimensions), dtype=np.float32)
+        self.action_memory = np.zeros(self.memory_size, dtype=np.float32)
+        self.reward_memory = np.zeros(self.memory_size, dtype=np.float32)
+
+    def store_transition(self, initial_state, action, reward, resulting_state):
+        index = self.memory_counter % self.memory_size
+        self.initial_state_memory[index] = initial_state
+        self.resulting_state_memory[index] = resulting_state
+        self.action_memory[index] = action
+        self.reward_memory[index] = reward
+        self.memory_counter += 1
+    
+    def choose_action(self, observation):
+        self.learn() # Compatibility layer
+        if np.random.random() > self.epsilon:
+            state = torch.tensor([observation], dtype=torch.float32)
+            if torch.cuda.is_available(): state = state.to('cuda')
+            actions = self.eval.forward(state)
+            return torch.argmax(actions).item()
+        else:
+            return np.random.choice(self.actions)
+
+    def learn(self):
+        if self.memory_counter < self.batch_size: return
+
+        self.eval.optimizer.zero_grad()
+        max_memory = min(self.memory_counter, self.memory_size)
+        batch = np.random.choice(max_memory, self.batch_size, replace=False)
+        batch_index = np.arange(self.batch_size, dtype=np.int32)
+        initial_states_batch = torch.tensor(self.initial_state_memory[batch])
+        resulting_states_batch = torch.tensor(self.resulting_state_memory[batch])
+        actions_batch = torch.tensor(self.action_memory[batch], dtype=torch.int64)
+        rewards_batch = torch.tensor(self.reward_memory[batch])
+        if torch.cuda.is_available():
+            initial_states_batch = initial_states_batch.to('cuda')
+            resulting_states_batch = resulting_states_batch.to('cuda')
+            actions_batch = actions_batch.to('cuda')
+            rewards_batch = rewards_batch.to('cuda')
+        initial_predictions = self.eval.forward(initial_states_batch)[batch_index, actions_batch] # Get the predicted outcome of the action taken for each initial state
+        next_predictions = self.eval.forward(resulting_states_batch)
+        improved_predictions = rewards_batch + self.gamma * torch.max(next_predictions, dim=1)[0]
+        loss = self.eval.loss(improved_predictions, initial_predictions)
+        if torch.cuda.is_available():
+            loss = loss.to('cuda')
+        loss.backward()
+        self.eval.optimizer.step()
+
+        if self.epsilon > self.minimum_epsilon: self.epsilon = max(self.epsilon - self.epsilon_decrement, self.minimum_epsilon)
+    
+    # Compatibility layer
+    def get_action(self, observations, garbage1, garbage2, garbage3):
+        ssThresh = observations[4]      # current ssThreshold
+        cWnd = observations[5]          # current congestion window size
+        segmentSize = observations[6]   # Segment size
+        segmentsAcked = observations[9] # Segments acknowledged
+        bytesInFlight = observations[7] # Bytes in flight
+        avgRtt = observations[11]       # avgRtt in microseconds
+        throughput = observations[15]   # throughput in bytes/sec
+
+        self.previous_state = self.current_state
+        self.current_state = [cWnd, bytesInFlight, segmentsAcked]
+        if self.previous_state is not None:
+            reward = 0
+            if throughput > self.previous["throughput"]: reward = 1
+            if avgRtt > self.previous["avgRtt"]: reward = -1
+            #print("Reward:", reward)
+            self.store_transition(self.previous_state, self.action, reward, self.current_state)
+        self.previous["throughput"] = throughput
+        self.previous["avgRtt"] = avgRtt
+        self.action = self.choose_action(self.current_state)
+        print("Action:", self.action)
+        new_cWnd = cWnd
+        if self.action == 1:
+            new_cWnd = min(cWnd + segmentSize, 50000)
+        elif self.action == 2:
+            new_cWnd = max(cWnd - segmentSize, 10 * segmentSize)
+        return [int(max(2 * segmentSize, bytesInFlight / 2)), new_cWnd]
+
