@@ -94,7 +94,7 @@ if args.use_rl:
         exit(1)
 
 res_list = ['ssThresh_l', 'cWnd_l', 'segmentsAcked_l',
-            'segmentSize_l', 'bytesInFlight_l']
+            'segmentSize_l', 'bytesInFlight_l', 'avgRtt_l', 'throughput_l']
 if args.result:
     for res in res_list:
         globals()[res] = []
@@ -131,8 +131,12 @@ try:
         segmentsAcked = obs[9]
         # estimated bytes in flight
         bytesInFlight = obs[7]
+        # average RTT in microseconds
+        avgRtt = obs[11]
+        # throughput in bytes/sec
+        throughput = obs[15]
 
-        cur_obs = [ssThresh, cWnd, segmentsAcked, segmentSize, bytesInFlight]
+        cur_obs = [ssThresh, cWnd, segmentsAcked, segmentSize, bytesInFlight, avgRtt, throughput]
         if args.show_log:
             print("Recv obs:", cur_obs)
 
