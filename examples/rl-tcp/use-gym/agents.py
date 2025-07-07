@@ -277,7 +277,7 @@ class Ben_Agent():
     # gamma is weighting of future rewards
     # epsilon is tradeoff between exploration and best action
     def __init__(self):
-        self.gamma = 0.15
+        self.gamma = 0.99
         self.learning_rate = 0.0003
         self.input_dimensions = 3
         self.num_actions = 3
