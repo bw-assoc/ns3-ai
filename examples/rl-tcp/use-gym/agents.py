@@ -346,6 +346,24 @@ class Ben_Agent():
         if self.epsilon > self.minimum_epsilon: self.epsilon = max(self.epsilon - self.epsilon_decrement, self.minimum_epsilon)
     
     # Compatibility layer
+    def calc_reward(self, avgRtt, throughput):
+        reward = 0
+        #if throughput > self.previous["throughput"] and self.action == 1: reward = 1
+        #if avgRtt > self.previous["avgRtt"]: reward = -1
+        if avgRtt < (1.2 * self.minAvgRtt):
+            if self.action == 1: reward = 1
+            elif self.action == 0: reward = 0.5
+            else: reward = -1
+        else:
+            if self.action == 2: reward = 1
+            elif self.action == 0: reward = -0.5
+            else: reward = -1
+        if avgRtt > 100000 and self.action != 2: reward = -999999
+        if throughput < 100000 and self.action != 1: reward = -999
+        print("Reward:", reward)
+        return reward
+
+
     def get_action(self, observations, garbage1, garbage2, garbage3):
         ssThresh = observations[4]      # current ssThreshold
         cWnd = observations[5]          # current congestion window size
@@ -356,13 +374,15 @@ class Ben_Agent():
         throughput = observations[15]   # throughput in bytes/sec
 
         self.previous_state = self.current_state
-        self.current_state = [cWnd, bytesInFlight, segmentsAcked]
         if self.previous_state is not None:
-            reward = 0
-            if throughput > self.previous["throughput"]: reward = 1
-            if avgRtt > self.previous["avgRtt"]: reward = -1
-            #print("Reward:", reward)
+            self.minAvgRtt = min(self.minAvgRtt, avgRtt)
+            self.current_state = [cWnd, avgRtt, self.minAvgRtt]
+            reward = self.calc_reward(avgRtt, throughput)
             self.store_transition(self.previous_state, self.action, reward, self.current_state)
+        else:
+            self.minAvgRtt = avgRtt
+            self.current_state = [cWnd, avgRtt, avgRtt]
+
         self.previous["throughput"] = throughput
         self.previous["avgRtt"] = avgRtt
         self.action = self.choose_action(self.current_state)
