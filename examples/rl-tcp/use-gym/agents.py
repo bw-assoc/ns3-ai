@@ -348,18 +348,22 @@ class Ben_Agent():
     # Compatibility layer
     def calc_reward(self, avgRtt, throughput):
         reward = 0
-        #if throughput > self.previous["throughput"] and self.action == 1: reward = 1
-        #if avgRtt > self.previous["avgRtt"]: reward = -1
-        if avgRtt < (1.2 * self.minAvgRtt):
-            if self.action == 1: reward = 1
-            elif self.action == 0: reward = 0.5
-            else: reward = -1
-        else:
-            if self.action == 2: reward = 1
-            elif self.action == 0: reward = -0.5
-            else: reward = -1
-        if avgRtt > 100000 and self.action != 2: reward = -999999
-        if throughput < 100000 and self.action != 1: reward = -999
+        #if throughput > self.previous["throughput"]: reward = 1
+        #if avgRtt > (1.2 * self.minAvgRtt) and avgRtt > self.previous["avgRtt"]: reward = -1
+        #if avgRtt > (1.5 * self.minAvgRtt) and self.action != 2: reward = -1
+
+        reward = throughput - avgRtt
+
+        #if avgRtt < (1.2 * self.minAvgRtt):
+            #if self.action == 1: reward = 1
+            #elif self.action == 0: reward = 0.5
+            #else: reward = -1
+        #else:
+            #if self.action == 2: reward = 1
+            #elif self.action == 0: reward = -0.5
+            #else: reward = -1
+        #if avgRtt > 100000 and self.action != 2: reward = -999999
+        #if throughput < 100000 and self.action != 1: reward = -999
         print("Reward:", reward)
         return reward
 
