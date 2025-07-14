@@ -345,7 +345,7 @@ class Ben_Agent():
     def calc_reward(self, avgRtt, throughput):
         reward = 0
         reward = throughput - avgRtt
-        print("Reward:", reward)
+        #print("Reward:", reward)
         return reward
 
 
@@ -365,7 +365,7 @@ class Ben_Agent():
             self.store_transition(self.previous_state, self.action, reward, self.current_state)
 
         self.action = self.choose_action(self.current_state)
-        print("Action:", self.action)
+        #print("Action:", self.action)
         new_cWnd = cWnd
         if self.action == 1:
             new_cWnd = min(cWnd + segmentSize, 50000)
