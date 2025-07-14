@@ -1,4 +1,5 @@
 All tests use Ben_Agent (which is the default for this branch)
+All tests used the default seed (42)
 
 defaults:
 duration: 10000
