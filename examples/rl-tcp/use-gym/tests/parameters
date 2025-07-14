@@ -1,0 +1,43 @@
+All tests use Ben_Agent (which is the default for this branch)
+
+defaults:
+duration: 10000
+gamma: 0.99
+learning_rate: 0.0003
+inputs: [cWnd, avgRtt, 90000]
+hidden_dimensions: 128
+batch_size: 64
+memory_size: 2000
+epsilon (epsilon_start): 1
+minimum_epsilon: 0.01
+epsilon_decrement: 5e-4
+
+small_agent:
+hidden_dimensions: 64
+
+big_agent:
+hidden_dimensions: 256
+
+small_gamma:
+gamma: 0.85
+
+big_gamma:
+gamma: 0.999
+
+low_lr:
+learning_rate: 0.0001
+
+high_lr:
+learning_rate: 0.001
+
+few_inputs:
+inputs: [cWnd, avgRtt]
+
+many_inputs:
+inputs: [cWnd, avgRtt, 80000, 100000]
+
+less_random:
+epsilon_decrement: 2e-3
+
+more_random:
+epsilon_decrement: 2e-4
