@@ -42,3 +42,7 @@ epsilon_decrement: 2e-3
 
 more_random:
 epsilon_decrement: 2e-4
+
+best:
+gamma: 0.85
+hidden_dimensions: 256
