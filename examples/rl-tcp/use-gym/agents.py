@@ -277,7 +277,7 @@ class Ben_Agent():
     # gamma is weighting of future rewards
     # epsilon is tradeoff between exploration and best action
     def __init__(self):
-        self.gamma = 0.99
+        self.gamma = 0.85
         self.learning_rate = 0.0003
         self.input_dimensions = 3
         self.num_actions = 3
@@ -290,7 +290,7 @@ class Ben_Agent():
         self.epsilon_decrement = 5e-4
         self.current_state = None # Compatibility layer
 
-        self.eval = DeepQNetwork(self.learning_rate, input_dimensions=self.input_dimensions, output_dimensions=self.num_actions, hidden_dimensions=128)
+        self.eval = DeepQNetwork(self.learning_rate, input_dimensions=self.input_dimensions, output_dimensions=self.num_actions, hidden_dimensions=256)
         self.initial_state_memory = np.zeros((self.memory_size, self.input_dimensions), dtype=np.float32)
         self.resulting_state_memory = np.zeros((self.memory_size, self.input_dimensions), dtype=np.float32)
         self.action_memory = np.zeros(self.memory_size, dtype=np.float32)
