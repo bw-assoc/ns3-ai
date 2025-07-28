@@ -179,7 +179,12 @@ else:
             plt.clf()
             plt.plot(x, y, label=res[:-2], linewidth=1, color='r')
             plt.xlabel('seconds')
+            match res[:-2]:
+                case "cWnd": plt.ylabel('cWnd (bytes)')
+                case "throughput": plt.ylabel('throughput (bytes/s)')
+                case "avgRtt": plt.ylabel('avgRtt (µs)')
             plt.title('{} for step interval of 100 ms'.format(res[:-2]))
+            plt.tight_layout()
             plt.savefig('{}.png'.format(os.path.join(args.result_dir, res[:-2])))
 
 finally:
