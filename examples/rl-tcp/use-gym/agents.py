@@ -260,7 +260,9 @@ class DeepQNetwork(nn.Module):
         self.activ1 = nn.ReLU()
         self.layer2 = nn.Linear(hidden_dimensions, hidden_dimensions)
         self.activ2 = nn.ReLU()
-        self.layer3 = nn.Linear(hidden_dimensions, self.output_dimensions)
+        self.layer3 = nn.Linear(hidden_dimensions, hidden_dimensions)
+        self.activ3 = nn.ReLU()
+        self.layer4 = nn.Linear(hidden_dimensions, self.output_dimensions)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
         self.loss = nn.MSELoss()
@@ -271,7 +273,9 @@ class DeepQNetwork(nn.Module):
         x = self.activ1(x)
         x = self.layer2(x)
         x = self.activ2(x)
-        return self.layer3(x)
+        x = self.layer3(x)
+        x = self.activ3(x)
+        return self.layer4(x)
 
 class Ben_Agent():
     # gamma is weighting of future rewards
@@ -279,7 +283,7 @@ class Ben_Agent():
     def __init__(self):
         self.gamma = 0.85
         self.learning_rate = 0.0003
-        self.input_dimensions = 3
+        self.input_dimensions = 2
         self.num_actions = 3
         self.actions = [i for i in range(self.num_actions)]
         self.batch_size = 64
@@ -359,7 +363,7 @@ class Ben_Agent():
         throughput = observations[15]   # throughput in bytes/sec
 
         self.previous_state = self.current_state
-        self.current_state = [cWnd, avgRtt, 90000]
+        self.current_state = [cWnd, avgRtt]
         if self.previous_state is not None:
             reward = self.calc_reward(avgRtt, throughput)
             self.store_transition(self.previous_state, self.action, reward, self.current_state)
